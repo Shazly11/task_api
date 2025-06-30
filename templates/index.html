@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Task Manager</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body {
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    body.dark-mode {
+      background-color: #121212;
+      color: #ffffff;
+    }
+
+    .dark-mode h1 {
+      color: #ffffff;
+    }
+
+    .dark-mode input,
+    .dark-mode select,
+    .dark-mode button,
+    .dark-mode .list-group-item {
+      background-color: #1e1e1e;
+      color: #ffffff;
+      border-color: #444;
+    }
+
+    .dark-mode .form-control::placeholder {
+      color: #aaa;
+    }
+
+    .dark-mode .btn-outline-secondary {
+      color: #ffffff;
+      border-color: #888;
+    }
+
+    .priority-badge {
+      font-size: 0.75rem;
+      margin-left: 8px;
+      text-transform: capitalize;
+    }
+
+    .dark-toggle-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+    }
+
+    @media (max-width: 576px) {
+      .dark-toggle-btn {
+        top: 10px;
+        right: 10px;
+        font-size: 0.9rem;
+        padding: 4px 8px;
+      }
+    }
+  </style>
+</head>
+<body class="bg-light">
+  <button id="toggle-dark" class="btn btn-sm btn-outline-secondary dark-toggle-btn">🌙</button>
+
+  <div class="container py-5">
+    <div class="text-center mb-4">
+      <h1><i class="bi bi-clipboard-check"></i> Task Manager</h1>
+    </div>
+
+    <!-- Form -->
+    <div class="row g-2 mb-4">
+      <div class="col-12 col-md-6">
+        <input type="text" id="taskInput" class="form-control" placeholder="Enter new task" />
+      </div>
+      <div class="col-8 col-md-4">
+        <select id="prioritySelect" class="form-select">
+          <option value="low">Low</option>
+          <option value="normal" selected>Normal</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+      <div class="col-4 col-md-2 d-grid">
+        <button onclick="addTask()" class="btn btn-primary">Add</button>
+      </div>
+    </div>
+
+    <!-- Tasks -->
+    <ul class="list-group" id="taskList"></ul>
+  </div>
+
+  <script>
+    async function fetchTasks() {
+      const res = await fetch('/tasks');
+      const tasks = await res.json();
+      const list = document.getElementById('taskList');
+      list.innerHTML = '';
+
+      tasks.forEach(task => {
+        let color = 'secondary';
+        if (task.priority === 'low') color = 'success';
+        else if (task.priority === 'normal') color = 'warning';
+        else if (task.priority === 'high') color = 'danger';
+
+        const li = document.createElement('li');
+        li.className = 'list-group-item d-flex justify-content-between align-items-center flex-wrap';
+        li.innerHTML = `
+          <span class="me-2">
+            ${task.title}
+            <span class="badge bg-${color} priority-badge">${task.priority}</span>
+          </span>
+          <button class="btn btn-sm btn-danger mt-2 mt-md-0" onclick="deleteTask(${task.id})">Delete</button>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    async function addTask() {
+      const title = document.getElementById('taskInput').value;
+      const priority = document.getElementById('prioritySelect').value;
+      if (!title.trim()) return;
+
+      await fetch('/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, priority })
+      });
+
+      document.getElementById('taskInput').value = '';
+      fetchTasks();
+    }
+
+    async function deleteTask(id) {
+      await fetch(`/tasks/${id}`, { method: 'DELETE' });
+      fetchTasks();
+    }
+
+    fetchTasks();
+  </script>
+
+  <script>
+    const toggleBtn = document.getElementById('toggle-dark');
+
+    if (localStorage.getItem('theme') === 'dark') {
+      document.body.classList.add('dark-mode');
+      toggleBtn.textContent = '☀️';
+    }
+
+    toggleBtn.addEventListener('click', () => {
+      document.body.classList.toggle('dark-mode');
+      const theme = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
+      toggleBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+      localStorage.setItem('theme', theme);
+    });
+  </script>
+</body>
+</html>
